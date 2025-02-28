@@ -16,7 +16,7 @@ M.labels_needed = 0
 
 --- Initializes static key-based state once when config is verified.
 ---@param base_keys string Configured base keys.
-function M.set_static_key_data(base_keys)
+function M.init_static_state(base_keys)
 	M.total_keys = #base_keys
 	M.max_labels = M.total_keys * M.total_keys
 	M.max_lines = M.max_labels
@@ -24,7 +24,7 @@ end
 
 --- Initializes state for a new motion.
 ---@param jump_target_count integer Number of jump targets found.
-function M.init_for_motion(jump_target_count)
+function M.init_state_for_motion(jump_target_count)
 	M.labels_needed = math.max(jump_target_count - M.total_keys, 0)
 end
 
