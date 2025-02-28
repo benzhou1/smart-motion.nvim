@@ -1,6 +1,8 @@
 --- Main entry point for smart-motion
 local state = require("smart-motion.core.state")
 local config = require("smart-motion.config")
+local word = require("smart-motion.motion.word")
+local consts = require("smart-motion.consts")
 local log = require("smart-motion.core.log")
 
 local M = {}
@@ -103,5 +105,10 @@ function M.init_state_for_motion(target_count)
 
 	log.debug("Per-motion state initialized")
 end
+
+M.hint_words = word.hint_words
+
+M.DIRECTION = consts.DIRECTION
+M.HINT_POSITION = consts.HINT_POSITION
 
 return M
