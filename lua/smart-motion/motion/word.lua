@@ -21,6 +21,7 @@ local targets = require("smart-motion.core.targets")
 local hints = require("smart-motion.core.hints")
 local linesModule = require("smart-motion.core.lines")
 local spam = require("smart-motion.core.spam")
+local log = require("smart-motion.core.log")
 
 local M = {}
 
@@ -28,9 +29,23 @@ local M = {}
 ---@param line string
 ---@return table[] List of word matches (each with start_pos, end_pos, text).
 function M.find_words_in_line(line)
+	log.debug("Finding words in line: " .. vim.inspect(line))
+
+	if type(line) ~= "string" then
+		log.error("find_words_in_line: Expected string line, got " .. type(line))
+
+		return {}
+	end
+
 	local words = {}
 	local search_start = 0
 	local pattern = consts.WORD_PATTERN
+
+	if not pattern or pattern == "" then
+		log.error("WORD_PATTERN is missing or empty in consts")
+
+		return {}
+	end
 
 	while true do
 		local match_data = vim.fn.matchstrpos(line, pattern, search_start)
@@ -49,6 +64,8 @@ function M.find_words_in_line(line)
 		search_start = end_pos + 1
 	end
 
+	log.debug(string.format("Found %d words in line", #words))
+
 	return words
 end
 
@@ -56,13 +73,34 @@ end
 ---@param lines string[] Lines to search.
 ---@param direction "before_cursor"|"after_cursor"
 ---@param start_line integer 0-based start line.
+---@param cursor_col integer Current cursor column.
 ---@return table[] List of word targets.
-function M.get_jump_targets_for_word(lines, direction, start_line)
-	local ctx = context.get()
+function M.get_jump_targets_for_word(lines, direction, start_line, cursor_col)
+	log.debug(
+		string.format(
+			"Collecting jump targets - direction: %s, start_line: %d, line_count: %d",
+			direction,
+			start_line,
+			#lines
+		)
+	)
+
+	if not vim.tbl_contains({ consts.DIRECTION.AFTER_CURSOR, consts.DIRECTION.BEFORE_CURSOR }, direction) then
+		log.error("get_jump_targets_for_word: Invalid direction: " .. tostring(direction))
+
+		return {}
+	end
+
+	if not lines or #lines == 0 then
+		log.warn("get_jump_targets_for_word: No lines provided")
+
+		return {}
+	end
+
 	local jump_targets = {}
 
 	local function should_stop_collecting()
-		return #targets >= state.max_labels
+		return #jump_targets >= state.max_labels
 	end
 
 	if direction == consts.DIRECTION.AFTER_CURSOR then
@@ -71,7 +109,7 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 			local words = M.find_words_in_line(line_text)
 
 			for _, word in ipairs(words) do
-				if line_number == start_line and word.start_pos <= ctx.cursor_col then
+				if line_number == start_line and word.start_pos <= cursor_col then
 					-- Skip words behind cursor on first line
 				else
 					table.insert(jump_targets, {
@@ -82,6 +120,8 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 				end
 
 				if should_stop_collecting() then
+					log.debug("Max labels reached during target collection (after_cursor)")
+
 					return jump_targets
 				end
 			end
@@ -95,7 +135,7 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 			for i = #words, 1, -1 do
 				local word = words[i]
 
-				if line_number == start_line and word.end_pos >= ctx.cursor_col then
+				if line_number == start_line and word.end_pos >= cursor_col then
 					-- Skip words after cursor on first line
 				else
 					table.insert(jump_targets, {
@@ -106,11 +146,15 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 				end
 
 				if should_stop_collecting() then
+					log.debug("Max labels reached during target collection (after_cursor)")
+
 					return jump_targets
 				end
 			end
 		end
 	end
+
+	log.debug(string.format("Collected %d jump targets", #jump_targets))
 
 	return jump_targets
 end
@@ -121,10 +165,25 @@ end
 ---@param config table
 ---@param is_spammable boolean|nil Optional, allows skipping highlighting if user is spamming the trigger key.
 function M.highlight_word(direction, hint_position, config, is_spammable)
+	log.debug(
+		string.format(
+			"Highlighting word - direction: %s, hint_position: %s, is_spammable: %s",
+			direction,
+			hint_position,
+			tostring(is_spammable)
+		)
+	)
+
 	--
 	-- Gather Context
 	--
 	local ctx = context.get()
+
+	if not config or type(config) ~= "table" or not config.keys then
+		log.error("highlight_word: Config is missing or invalid")
+
+		return
+	end
 
 	--
 	-- Initial Cleanup
@@ -138,6 +197,8 @@ function M.highlight_word(direction, hint_position, config, is_spammable)
 	local spam_key = direction .. "-" .. hint_position
 
 	if is_spammable and spam.is_spam(spam_key) then
+		log.debug(string.format("Spamming detected - executing native motion for: %s", spam_key))
+
 		spam.handle_word_motion_spam(direction, hint_position)
 
 		return
@@ -148,6 +209,8 @@ function M.highlight_word(direction, hint_position, config, is_spammable)
 	--
 	local lines = linesModule.get_lines_for_motion(ctx.bufnr, ctx.cursor_line, direction)
 	if not lines or #lines == 0 then
+		log.warn("No lines to search - exiting early")
+
 		return
 	end
 
@@ -155,7 +218,12 @@ function M.highlight_word(direction, hint_position, config, is_spammable)
 	-- Collect Targets
 	--
 	local jump_targets = targets.get_jump_targets(consts.TARGET_TYPES.WORD, lines, direction, ctx.cursor_line)
+
+	log.debug(string.format("Found %d jump targets", #jump_targets))
+
 	if #jump_targets == 0 then
+		log.warn("No valid jump targets found - exiting early")
+
 		return
 	end
 
@@ -181,12 +249,18 @@ function M.highlight_word(direction, hint_position, config, is_spammable)
 	--
 	if selected then
 		utils.jump_to_target(selected, hint_position)
+
+		log.debug(string.format("Jumped to target - line: %d, col: %d", selected.line, selected.start_pos))
+	else
+		log.warn("No target selected - user cancelled")
 	end
 
 	--
 	-- Clear highlights
 	--
 	highlight.clear(ctx.bufnr)
+
+	log.debug("Word motion complete")
 end
 
 return M
