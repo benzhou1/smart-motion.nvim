@@ -5,7 +5,7 @@ local M = {}
 
 --- Default Configuration
 M.defaults = {
-	keys = "asdfghjkltyvb",
+	keys = "fjdksleirughtynm",
 	highlight = {
 		hint = "DiagnosticHint",
 		first_char = "DiagnosticHint",
@@ -13,7 +13,7 @@ M.defaults = {
 		dim = "Comment",
 	},
 	line_limit = nil,
-	multi_line = false,
+	multi_line = true,
 	mappings = {
 		n = {}, -- Normal mode mappings
 		v = {}, -- Visual mode mappings (optional)
