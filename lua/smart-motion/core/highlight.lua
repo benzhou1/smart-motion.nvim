@@ -43,17 +43,17 @@ end
 --- Applies hints to all jump targets.
 ---@param bufnr integer
 ---@param hints table<table, string> Target to hint mapping.
----@param target_char "first"|"last" Whether to position the hint at the start or end of the word.
-function M.apply_hint_labels(bufnr, hints, target_char)
+---@param hint_position "start"|"end" Whether to position the hint at the start or end of the word.
+function M.apply_hint_labels(bufnr, hints, hint_position)
 	for target, label in pairs(hints) do
-		local pos = (target_char == "first") and target.start_pos or (target.end_pos - 1)
+		local pos = (hint_position == consts.HINT_POSITION.START) and target.start_pos or (target.end_pos - 1)
 
 		if #label == 1 then
 			M.apply_single_hint_label(bufnr, target.line, pos, label)
 		elseif #label == 2 then
 			M.apply_double_hint_label(bufnr, target.line, pos, label)
 		else
-			vim.notify("SmartMotion: Unexpected hint length for '" .. label .. "'", vim.log.levels.ERROR)
+			vim.notify("smart-motion: Unexpected hint length for '" .. label .. "'", vim.log.levels.ERROR)
 		end
 	end
 end
