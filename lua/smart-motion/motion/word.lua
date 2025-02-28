@@ -22,6 +22,7 @@ local hints = require("smart-motion.core.hints")
 local linesModule = require("smart-motion.core.lines")
 local spam = require("smart-motion.core.spam")
 local log = require("smart-motion.core.log")
+local init = require("smart-motion.init")
 
 local M = {}
 
@@ -159,12 +160,11 @@ function M.get_jump_targets_for_word(lines, direction, start_line, cursor_col)
 	return jump_targets
 end
 
---- Public method: Highlights word jump targets in a given direction.
+--- Public method: Hints words from the possible jump targets in a given direction.
 ---@param direction "before_cursor"|"after_cursor"
 ---@param hint_position "start"|"end"
----@param config table
 ---@param is_spammable boolean|nil Optional, allows skipping highlighting if user is spamming the trigger key.
-function M.highlight_word(direction, hint_position, config, is_spammable)
+function M.hint_words(direction, hint_position, is_spammable)
 	log.debug(
 		string.format(
 			"Highlighting word - direction: %s, hint_position: %s, is_spammable: %s",
@@ -178,6 +178,7 @@ function M.highlight_word(direction, hint_position, config, is_spammable)
 	-- Gather Context
 	--
 	local ctx = context.get()
+	local config = init.config
 
 	if not config or type(config) ~= "table" or not config.keys then
 		log.error("highlight_word: Config is missing or invalid")
