@@ -20,6 +20,9 @@ M.defaults = {
 	},
 }
 
+--- Holds the final validated config
+M.validated = nil
+
 --- Splits a string into a table of characters.
 ---@param str string
 ---@return string[]
@@ -52,7 +55,9 @@ function M.validate(user_config)
 		error("smart-motion: `keys` must be a non-empty string")
 	end
 
-	config.keys = split_string(config.keys)
+	if type(config.keys) == "string" then
+		config.keys = split_string(config.keys)
+	end
 
 	-- Validate mappings
 	if type(config.mappings) ~= "table" or not config.mappings.n or not config.mappings.v then
@@ -86,6 +91,10 @@ function M.validate(user_config)
 	end
 
 	log.debug("Configuration validated successfully")
+
+	M.validated = config
+
+	return config
 end
 
 return M
