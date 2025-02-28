@@ -1,5 +1,6 @@
 --- Handles motion spam detection.
 local consts = require("smart-motion.consts")
+local log = require("smart-motion.core.log")
 
 local M = {}
 
@@ -16,6 +17,8 @@ function M.is_spam(key)
 	local last_motion_time = last_motion_times[key]
 
 	if last_motion_time and (now - last_motion_time < SPAM_THRESHOLD) then
+		log.debug("Spam detected for motion: " .. key)
+
 		last_motion_times[key] = now
 
 		return true
@@ -29,20 +32,26 @@ end
 --- Handles executing word motions when spamming
 ---@param direction "before_cursor"|"after_cursor"
 ---@param hint_position "start"|"end"
-function M.handle_word_motion_spam(direction, hint_location)
-	if direction == consts.DIRECTION.AFTER_CURSOR and hint_location == consts.HINT_POSITION.START then
+function M.handle_word_motion_spam(direction, hint_position)
+	log.debug(string.format("Handling spam motion - direction: %s, position: %s", direction, hint_position))
+
+	if direction == consts.DIRECTION.AFTER_CURSOR and hint_position == consts.HINT_POSITION.START then
 		vim.cmd("normal! w")
-	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_location == consts.HINT_POSITION.START then
+	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_position == consts.HINT_POSITION.START then
 		vim.cmd("normal! b")
-	elseif direction == consts.DIRECTION.AFTER_CURSOR and hint_location == consts.HINT_POSITION.END then
+	elseif direction == consts.DIRECTION.AFTER_CURSOR and hint_position == consts.HINT_POSITION.END then
 		vim.cmd("normal! e")
-	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_location == consts.HINT_POSITION.END then
+	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_position == consts.HINT_POSITION.END then
 		vim.cmd("normal! ge")
+	else
+		log.warn(string.format("Unknown spam motion - direction: %s, position: %s", direction, hint_position))
 	end
 end
 
 --- Clears spam tracking data
 function M.reset()
+	log.debug("Resetting spam tracker")
+
 	last_motion_times = {}
 end
 
