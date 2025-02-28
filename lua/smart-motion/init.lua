@@ -7,9 +7,6 @@ local log = require("smart-motion.core.log")
 
 local M = {}
 
---- Holds final validated config
-M.config = {}
-
 --- Helper to detect if which-key.nvim is installed.
 local function has_which_key()
 	local ok = pcall(require, "which-key")
@@ -79,36 +76,16 @@ function M.setup(user_config)
 		return
 	end
 
-	M.config = validated_config
-
-	register_mappings(M.config.mappings)
+	register_mappings(validated_config.mappings)
 
 	-- Setup static state based on config (keys and max_labels only need to be computed once)
-	state.init_static_state(M.config)
+	state.init_static_state(validated_config.keys)
 
 	log.debug("SmartMotion setup complete")
 end
 
---- Initializes smart-motion for a specific motion (w, e, be, ge, etc).
---- This is per-motion state and gets reset every time a new motion starts.
----@param target_count integer
-function M.init_state_for_motion(target_count)
-	log.debug("Initializing per-motion state for " .. target_count .. " targets")
-
-	if type(target_count) ~= "number" or target_count < 0 then
-		log.error("Invalid target_count passed to init_state_for_motion: " .. tostring(target_count))
-
-		return
-	end
-
-	state.init_state_for_motion(target_count)
-
-	log.debug("Per-motion state initialized")
-end
-
+--- Expose methods and constants
 M.hint_words = word.hint_words
-
-M.DIRECTION = consts.DIRECTION
-M.HINT_POSITION = consts.HINT_POSITION
+M.consts = consts
 
 return M
