@@ -1,3 +1,16 @@
+-- Universal SmartMotion Flow
+-- Gather Context - Cursor position, buffer number, direction, etc
+-- Initial Cleanup - Clear floating windows and clear highlighting
+-- Handle Spam - If a spammable motion, handle it
+-- Get Lines - Get lines we want to get targets from
+-- Collect Targets - Call a shared `get_jump_targets()` function (with target type: word, char, line, etc...)
+-- Generate Hints - Call a shared `generate_hint_labels()` to compute labels
+-- Assign Hints to Targets - Apply the hints (reusing the same logic for all motions)
+-- Apply Highlights - Use a unified highlight function that works for any motion type
+-- Wait for Selection - Use `getcharstr()` or similar to wait for user selection
+-- Execute Jump - Move cursor to selected target
+-- Clear Highlights - Remove all hints after action completes
+
 --- Word motion handler.
 local consts = require("smart-motion.consts")
 local context = require("smart-motion.core.context")
@@ -41,7 +54,7 @@ end
 
 --- Collects word jump targets for a motion.
 ---@param lines string[] Lines to search.
----@param direction "before"|"after"
+---@param direction "before_cursor"|"after_cursor"
 ---@param start_line integer 0-based start line.
 ---@return table[] List of word targets.
 function M.get_jump_targets_for_word(lines, direction, start_line)
@@ -52,14 +65,14 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 		return #targets >= state.max_labels
 	end
 
-	if direction == consts.DIRECTION.AFTER then
+	if direction == consts.DIRECTION.AFTER_CURSOR then
 		for line_index, line_text in ipairs(lines) do
 			local line_number = start_line + line_index - 1
 			local words = M.find_words_in_line(line_text)
 
 			for _, word in ipairs(words) do
 				if line_number == start_line and word.start_pos <= ctx.cursor_col then
-				-- Skip words behind cursor on first line
+					-- Skip words behind cursor on first line
 				else
 					table.insert(jump_targets, {
 						line = line_number,
@@ -73,7 +86,7 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 				end
 			end
 		end
-	elseif direction == consts.DIRECTION.BEFORE then
+	elseif direction == consts.DIRECTION.BEFORE_CURSOR then
 		for line_index = #lines, 1, -1 do
 			local line_text = lines[line_index]
 			local line_number = start_line + line_index - 1
@@ -83,7 +96,7 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 				local word = words[i]
 
 				if line_number == start_line and word.end_pos >= ctx.cursor_col then
-				-- Skip words after cursor on first line
+					-- Skip words after cursor on first line
 				else
 					table.insert(jump_targets, {
 						line = line_number,
@@ -103,11 +116,11 @@ function M.get_jump_targets_for_word(lines, direction, start_line)
 end
 
 --- Public method: Highlights word jump targets in a given direction.
----@param direction "before"|"after"
----@param jump_location "first"|"last"
+---@param direction "before_cursor"|"after_cursor"
+---@param hint_position "start"|"end"
 ---@param config table
 ---@param is_spammable boolean|nil Optional, allows skipping highlighting if user is spamming the trigger key.
-function M.highlight_word(direction, jump_location, config, is_spammable)
+function M.highlight_word(direction, hint_position, config, is_spammable)
 	--
 	-- Gather Context
 	--
@@ -122,10 +135,10 @@ function M.highlight_word(direction, jump_location, config, is_spammable)
 	--
 	-- Handle spam detection
 	--
-	local spam_key = direction .. "-" .. jump_location
+	local spam_key = direction .. "-" .. hint_position
 
 	if is_spammable and spam.is_spam(spam_key) then
-		spam.handle_word_motion_spam(direction, jump_location)
+		spam.handle_word_motion_spam(direction, hint_position)
 
 		return
 	end
@@ -156,7 +169,7 @@ function M.highlight_word(direction, jump_location, config, is_spammable)
 	--
 	-- Apply Highlights
 	--
-	highlight.apply_hint_labels(ctx.bufnr, assigned_hint_labels, jump_location)
+	highlight.apply_hint_labels(ctx.bufnr, assigned_hint_labels, hint_position)
 
 	--
 	-- Wait for Selection
@@ -167,9 +180,7 @@ function M.highlight_word(direction, jump_location, config, is_spammable)
 	-- Execute Jump
 	--
 	if selected then
-		local jump_pos = (jump_location == consts.JUMP_LOCATION.FIRST) and selected.start_pos or (selected.end_pos - 1)
-
-		vim.api.nvim_win_set_cursor(0, { selected.line + 1, jump_pos })
+		utils.jump_to_target(selected, hint_position)
 	end
 
 	--
