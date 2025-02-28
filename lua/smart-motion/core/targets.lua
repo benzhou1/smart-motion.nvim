@@ -1,6 +1,7 @@
 --- Central dispatcher for retrieving jump targets.
 local word = require("smart-motion.motion.word")
 local consts = require("smart-motion.consts")
+local log = require("smart-motion.core.log")
 
 local M = {}
 
@@ -11,11 +12,15 @@ local M = {}
 ---@param start_line integer Starting line (0-based)
 ---@return table[] List of jump targets.
 function M.get_jump_targets(type, ...)
+	log.debug("Fetching jump targets for type: " .. type)
+
 	if type == consts.TARGET_TYPES.WORD then
 		return word.get_jump_targets_for_word(...)
 	end
 
-	error("Unknown target type: " .. tostring(type))
+	log.error("Unknown target type passed to get_jump_targets: " .. tostring(type))
+
+	return {}
 end
 
 return M
