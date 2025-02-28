@@ -14,28 +14,38 @@ M.DIRECTION = {
 	BEFORE = "before",
 }
 
-M.JUMP_TARGET_LOCATION = {
+M.JUMP_LOCATION = {
 	FIRST = "first",
 	LAST = "last",
 }
 
+M.WORD_MOTIONS = {
+	w = "w",
+	b = "b",
+	e = "e",
+	ge = "ge",
+}
+
 M.motion_directions = {
-	w = M.DIRECTION.AFTER,
-	e = M.DIRECTION.AFTER,
-	b = M.DIRECTION.BEFORE,
-	ge = M.DIRECTION.BEFORE,
+	[M.WORD_MOTIONS.w] = M.DIRECTION.AFTER,
+	[M.WORD_MOTIONS.b] = M.DIRECTION.BEFORE,
+	[M.WORD_MOTIONS.e] = M.DIRECTION.AFTER,
+	[M.WORD_MOTIONS.ge] = M.DIRECTION.BEFORE,
 }
 
 M.motion_target_char = {
-	w = M.JUMP_TARGET_LOCATION.FIRST,
-	b = M.JUMP_TARGET_LOCATION.FIRST,
-	e = M.JUMP_TARGET_LOCATION.LAST,
-	ge = M.JUMP_TARGET_LOCATION.LAST,
+	[M.WORD_MOTIONS.w] = M.JUMP_LOCATION.FIRST,
+	[M.WORD_MOTIONS.b] = M.JUMP_LOCATION.FIRST,
+	[M.WORD_MOTIONS.e] = M.JUMP_LOCATION.LAST,
+	[M.WORD_MOTIONS.ge] = M.JUMP_LOCATION.LAST,
 }
 
-M.motion_pattern = {
-	word = [[\k\+]],
-	space = [[\s]],
+M.WORD_PATTERN = [[\k\+]]
+
+M.TARGET_TYPES = {
+	WORD = "word",
+	CHAR = "char",
+	LINE = "line",
 }
 
 return M
