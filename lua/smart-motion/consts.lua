@@ -10,15 +10,18 @@ M.highlights = {
 }
 
 M.DIRECTION = {
-	AFTER = "after",
-	BEFORE = "before",
+	AFTER_CURSOR = "after_cursor",
+	BEFORE_CURSOR = "before_cursor",
 }
 
-M.JUMP_LOCATION = {
-	FIRST = "first",
-	LAST = "last",
+M.HINT_POSITION = {
+	START = "start",
+	END = "end",
 }
 
+--
+-- Word Motion constants
+--
 M.WORD_MOTIONS = {
 	w = "w",
 	b = "b",
@@ -26,18 +29,18 @@ M.WORD_MOTIONS = {
 	ge = "ge",
 }
 
-M.motion_directions = {
-	[M.WORD_MOTIONS.w] = M.DIRECTION.AFTER,
-	[M.WORD_MOTIONS.b] = M.DIRECTION.BEFORE,
-	[M.WORD_MOTIONS.e] = M.DIRECTION.AFTER,
-	[M.WORD_MOTIONS.ge] = M.DIRECTION.BEFORE,
+M.word_motion_direction = {
+	[M.WORD_MOTIONS.w] = M.DIRECTION.AFTER_CURSOR,
+	[M.WORD_MOTIONS.b] = M.DIRECTION.BEFORE_CURSOR,
+	[M.WORD_MOTIONS.e] = M.DIRECTION.AFTER_CURSOR,
+	[M.WORD_MOTIONS.ge] = M.DIRECTION.BEFORE_CURSOR,
 }
 
-M.motion_target_char = {
-	[M.WORD_MOTIONS.w] = M.JUMP_LOCATION.FIRST,
-	[M.WORD_MOTIONS.b] = M.JUMP_LOCATION.FIRST,
-	[M.WORD_MOTIONS.e] = M.JUMP_LOCATION.LAST,
-	[M.WORD_MOTIONS.ge] = M.JUMP_LOCATION.LAST,
+M.word_motion_hint_position = {
+	[M.WORD_MOTIONS.w] = M.JUMP_LOCATION.START,
+	[M.WORD_MOTIONS.b] = M.JUMP_LOCATION.START,
+	[M.WORD_MOTIONS.e] = M.JUMP_LOCATION.END,
+	[M.WORD_MOTIONS.ge] = M.JUMP_LOCATION.END,
 }
 
 M.WORD_PATTERN = [[\k\+]]
