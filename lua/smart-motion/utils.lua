@@ -1,6 +1,9 @@
 --- General-purpose utilities.
 local consts = require("smart-motion.consts")
 local log = require("smart-motion.core.log")
+local context = require("smart-motion.core.context")
+local state = require("smart-motion.core.state")
+local config = require("smart-motion.config")
 
 local M = {}
 
@@ -103,6 +106,42 @@ function M.jump_to_target(target, hint_position)
 	else
 		log.debug(string.format("Cursor moved to line %d, col %d", target.line + 1, pos))
 	end
+end
+
+--- Prepares the motion by gathering context, config, and initializing state.
+---@param direction "before_cursor"|"after_cursor"
+---@param hint_position "start"|"end"
+---@return table|nil ctx, table|nil cfg, table|nil motion_state - Returns nils if validation fails.
+function M.prepare_motion(direction, hint_position)
+	local ctx = context.get()
+
+	if not vim.tbl_contains({ "before_cursor", "after_cursor" }, direction) then
+		log.error("prepare_motion: Invalid direction provided: " .. tostring(direction))
+
+		return nil, nil, nil
+	end
+
+	if not vim.tbl_contains({ "start", "end" }, hint_position) then
+		log.error("prepare_motion: Invalid hint_position provided: " .. tostring(hint_position))
+		return nil, nil, nil
+	end
+
+	local cfg = config.validated
+
+	if not cfg or type(cfg) ~= "table" then
+		log.error("prepare_motion: Config is missing or invalid")
+
+		return nil, nil, nil
+	end
+
+	if type(cfg.keys) ~= "table" or #cfg.keys == 0 then
+		log.error("prepare_motion: Config `keys` is missing or improperly formatted")
+		return nil, nil, nil
+	end
+
+	state.set_motion_intent(direction, hint_position)
+
+	return ctx, cfg, state.get()
 end
 
 return M
