@@ -19,13 +19,11 @@ local M = {}
 function M.generate_hint_labels(base_keys, labels_needed)
 	if type(base_keys) ~= "table" or #base_keys == 0 then
 		log.error("generate_hint_labels received invalid base_keys")
-
 		return {}
 	end
 
 	if type(labels_needed) ~= "number" or labels_needed <= 0 then
 		log.error("generate_hint_labels received invalid labels_needed: " .. tostring(labels_needed))
-
 		return {}
 	end
 
