@@ -1,0 +1,1 @@
+-- require("smart-motion").setup()
