@@ -27,16 +27,16 @@ function M.is_spam(key)
 end
 
 --- Handles executing word motions when spamming
----@param direction "before"|"after"
----@param jump_location "first"|"last"
-function M.handle_word_motion_spam(direction, jump_location)
-	if direction == consts.DIRECTION.AFTER and jump_location == consts.JUMP_LOCATION.FIRST then
+---@param direction "before_cursor"|"after_cursor"
+---@param hint_position "start"|"end"
+function M.handle_word_motion_spam(direction, hint_location)
+	if direction == consts.DIRECTION.AFTER_CURSOR and hint_location == consts.HINT_POSITION.START then
 		vim.cmd("normal! w")
-	elseif direction == consts.DIRECTION.BEFORE and jump_location == consts.JUMP_LOCATION.FIRST then
+	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_location == consts.HINT_POSITION.START then
 		vim.cmd("normal! b")
-	elseif direction == consts.DIRECTION.AFTER and jump_location == consts.JUMP_LOCATION.LAST then
+	elseif direction == consts.DIRECTION.AFTER_CURSOR and hint_location == consts.HINT_POSITION.END then
 		vim.cmd("normal! e")
-	elseif direction == consts.DIRECTION.BEFORE and jump_location == consts.JUMP_LOCATION.LAST then
+	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_location == consts.HINT_POSITION.END then
 		vim.cmd("normal! ge")
 	end
 end
