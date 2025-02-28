@@ -1,1 +1,1 @@
--- require("smart-motion").setup()
+require("smart-motion").setup()
