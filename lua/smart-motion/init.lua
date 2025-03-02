@@ -4,6 +4,7 @@ local config = require("smart-motion.config")
 local word = require("smart-motion.motion.word")
 local consts = require("smart-motion.consts")
 local log = require("smart-motion.core.log")
+local highlight_setup = require("smart-motion.highlight_setup")
 
 local M = {}
 
@@ -76,10 +77,12 @@ function M.setup(user_config)
 		return
 	end
 
+	highlight_setup.setup(validated_config)
+
 	register_mappings(validated_config.mappings)
 
 	-- Setup static state based on config (keys and max_labels only need to be computed once)
-	state.init_static_state(validated_config.keys)
+	state.init_motion_state(validated_config)
 
 	log.debug("SmartMotion setup complete")
 end
