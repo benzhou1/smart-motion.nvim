@@ -18,6 +18,8 @@ local highlight = require("smart-motion.core.highlight")
 local targets = require("smart-motion.core.targets")
 local hints = require("smart-motion.core.hints")
 local spam = require("smart-motion.core.spam")
+local lines_module = require("smart-motion.core.lines")
+local selection = require("smart-motion.core.selection")
 local log = require("smart-motion.core.log")
 
 local M = {}
@@ -39,7 +41,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 	--
 	-- Gather Context
 	--
-	local ctx, cfg, motion_state = utils.prepare_motion(direction, hint_position)
+	local ctx, cfg, motion_state = utils.prepare_motion(direction, hint_position, consts.TARGET_TYPES.WORD)
 
 	if not ctx or not cfg or not motion_state then
 		log.error("hint_words: Failed to prepare motion - aborting")
@@ -49,9 +51,10 @@ function M.hint_words(direction, hint_position, is_spammable)
 
 	--
 	-- Initial Cleanup
+	-- Resets the motion by clearing highlights, closing floating windows
+	-- clearing spam tracking, and resetting the dynamic state
 	--
-	utils.close_floating_windows()
-	highlight.clear(ctx.bufnr)
+	utils.reset_motion(ctx, cfg, motion_state)
 
 	--
 	-- Handle spam detection
@@ -61,7 +64,17 @@ function M.hint_words(direction, hint_position, is_spammable)
 	if is_spammable and spam.is_spam(spam_key) then
 		log.debug(string.format("Spamming detected - executing native motion for: %s", spam_key))
 
-		spam.handle_word_motion_spam(direction, hint_position)
+		spam.handle_word_motion_spam(ctx, cfg, motion_state)
+
+		return
+	end
+
+	--
+	-- Calculate Lines
+	--
+	local lines = lines_module.get_lines_for_motion(ctx, cfg, motion_state)
+	if not lines or #lines == 0 then
+		log.warn("No lines to search - exiting early")
 
 		return
 	end
@@ -69,7 +82,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 	--
 	-- Collect Targets
 	--
-	local jump_targets = targets.get_jump_targets(consts.TARGET_TYPES.WORD, ctx, cfg, state)
+	local jump_targets = targets.get_jump_targets(ctx, cfg, motion_state)
 
 	log.debug(string.format("Found %d jump targets", #jump_targets))
 
@@ -79,39 +92,44 @@ function M.hint_words(direction, hint_position, is_spammable)
 		return
 	end
 
-	state.finalize_motion_state(#jump_targets)
-	motion_state = state.get()
+	state.finalize_motion_state(motion_state)
 
 	--
 	-- Assign Hints
 	--
-	local assigned_hint_labels = hints.generate_and_assign_labels(jump_targets, cfg.keys, motion_state.labels_needed)
+	hints.generate_and_assign_labels(ctx, cfg, motion_state)
 
 	--
 	-- Apply Highlights
 	--
-	highlight.apply_hint_labels(ctx.bufnr, assigned_hint_labels, hint_position)
+	highlight.apply_hint_labels(ctx, cfg, motion_state)
 
 	--
 	-- Wait for Selection
 	--
-	local selected = utils.wait_for_hint_selection(assigned_hint_labels)
+	selection.wait_for_hint_selection(ctx, cfg, motion_state)
 
 	--
 	-- Execute Jump
 	--
-	if selected then
-		utils.jump_to_target(selected, hint_position)
+	if motion_state.selected_jump_target then
+		utils.jump_to_target(ctx, cfg, motion_state)
 
-		log.debug(string.format("Jumped to target - line: %d, col: %d", selected.line, selected.start_pos))
+		log.debug(
+			string.format(
+				"Jumped to target - line: %d, col: %d",
+				motion_state.selected_jump_target.line,
+				motion_state.selected_jump_target.start_pos
+			)
+		)
 	else
 		log.warn("No target selected - user cancelled")
 	end
 
 	--
-	-- Clear highlights
+	-- Clear Everything
 	--
-	highlight.clear(ctx.bufnr)
+	utils.reset_motion(ctx, cfg, motion_state)
 
 	log.debug("Word motion complete")
 end
