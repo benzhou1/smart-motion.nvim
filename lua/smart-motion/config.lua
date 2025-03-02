@@ -7,10 +7,11 @@ local M = {}
 M.defaults = {
 	keys = "fjdksleirughtynm",
 	highlight = {
-		hint = "DiagnosticHint",
-		first_char = "DiagnosticHint",
-		second_char = "DiagnosticHint",
-		dim = "Comment",
+		hint = "SmartMotionHint",
+		first_char = "SmartMotionFirstChar",
+		second_char = "SmartMotionSecondChar",
+		first_char_dim = "SmartMotionFirstCharDim",
+		dim = "SmartMotionDim",
 	},
 	line_limit = nil,
 	multi_line = true,
@@ -65,16 +66,16 @@ function M.validate(user_config)
 		error("smart-motion: `mappings` must be a table with `n` and `v` keys")
 	end
 
-	-- Validate Highlight
-	if type(config.highlight) ~= "table" then
-		log.error("`highlight` must be a table (got: " .. type(config.highlight) .. ")")
-		error("smart-motion: `highlight` must be a table")
-	end
-
-	for _, key in ipairs({ "hint", "first_char", "second_char", "dim" }) do
-		if type(config.highlight[key]) ~= "string" then
-			log.error("`highlight." .. key .. "` must be a string highlight group")
-			error("smart-motion: `highlight." .. key .. "` must be a string highlight group")
+	-- Apply highlight if table provided
+	for name, value in pairs(config.highlight) do
+		if type(value) == "table" then
+			-- User passed direct highlight table (e.g., { fg = "#E06C75", bg = "none" })
+			local group_name = "SmartMotion" .. name:gsub("^%l", string.upper) -- camel case to Pascal case
+			vim.api.nvim_set_hl(0, group_name, value)
+			config.highlight[name] = group_name
+		elseif type(value) ~= "string" then
+			log.error("`highlight." .. name .. "` must be either a string highlight group or a table")
+			error("smart-motion: `highlight." .. name .. "` must be either a string or a table")
 		end
 	end
 
