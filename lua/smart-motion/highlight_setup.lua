@@ -10,64 +10,69 @@ local default_highlights = {
 
 local M = {}
 
---- Applies a single highlight group.
----@param group string
----@param opts table
+--- Helper: Convert "first_char" to "SmartMotionFirstChar"
+local function highlight_key_to_group(key)
+	return "SmartMotion" .. key:gsub("_(%l)", string.upper)
+end
+
+--- Apply a highlight group.
+---@param group string Highlight group name.
+---@param opts table Highlight definition.
 local function apply_highlight(group, opts)
 	vim.api.nvim_set_hl(0, group, opts)
 end
 
---- Merges defaults with user-supplied highlight overrides.
----@param cfg table
----@return table merged_highlights
-local function merge_highlights(cfg)
-	local merged = vim.deepcopy(default_highlights)
-
-	-- Go through each highlight key (hint, first_char, etc.)
-	for key, value in pairs(cfg.highlight or {}) do
-		local group_name = "SmartMotion" .. key:gsub("^%l", string.upper)
-
-		if type(value) == "table" then
-			-- User provided a color table (fg, bg, etc.)
-			merged[group_name] = vim.tbl_deep_extend("force", merged[group_name] or {}, value)
-		elseif type(value) == "string" then
-			-- User provided a group name — we don't change it, just skip merging.
-			merged[group_name] = nil -- User is delegating to their own group.
-		else
-			log.error("Invalid type for highlight." .. key .. ": expected string or table, got " .. type(value))
-		end
+--- Ensure all default highlight groups exist.
+local function apply_default_highlights()
+	for group, opts in pairs(default_highlights) do
+		apply_highlight(group, opts)
 	end
-
-	return merged
 end
 
---- Sets all SmartMotion highlight groups.
----@param cfg table Validated config (passed from setup)
+--- Sets up highlights for SmartMotion.
+---@param cfg table Validated user config.
 function M.setup(cfg)
 	log.debug("Setting up SmartMotion highlights")
 
-	-- Merge defaults with user overrides
-	local merged_highlights = merge_highlights(cfg)
+	-- Always apply defaults first to ensure they exist.
+	apply_default_highlights()
 
-	-- Apply all highlights
-	for group, opts in pairs(merged_highlights) do
-		apply_highlight(group, opts)
-	end
+	local highlight_config = cfg.highlight or {}
 
-	-- Handle user-defined highlight groups (direct strings, no merging needed)
-	for key, value in pairs(cfg.highlight or {}) do
-		if type(value) == "string" then
-			-- Just verify group exists — don't set it, user controls this.
+	-- Process each user-defined highlight.
+	for key, value in pairs(highlight_config) do
+		local default_group = highlight_key_to_group(key)
+
+		if type(value) == "table" then
+			-- User gave colors directly — override everything.
+			apply_highlight(default_group, value)
+		elseif type(value) == "string" then
+			-- User referenced an external/custom group.
 			local ok = pcall(vim.api.nvim_get_hl_by_name, value, true)
-			if not ok then
-				log.warn("Highlight group '" .. value .. "' does not exist (referenced in highlight." .. key .. ")")
+
+			if ok then
+				-- If it exists, we're good.
+				cfg.highlight[key] = value
+			else
+				-- If it does not exist, fallback to the default group.
+				log.info(
+					"Custom highlight group '"
+					.. value
+					.. "' not found, falling back to default '"
+					.. default_group
+					.. "'"
+				)
+				cfg.highlight[key] = default_group
 			end
+		else
+			log.error("Invalid highlight type for '" .. key .. "': expected string or table, got " .. type(value))
+			error("Invalid highlight type for '" .. key .. "'")
 		end
 	end
 
-	log.debug("SmartMotion highlight groups set.")
+	log.debug("SmartMotion highlights applied successfully.")
 
-	-- Reapply highlights on colorscheme change.
+	-- Reapply highlights after ColorScheme changes.
 	vim.api.nvim_create_autocmd("ColorScheme", {
 		group = vim.api.nvim_create_augroup("SmartMotionHighlights", { clear = true }),
 		callback = function()

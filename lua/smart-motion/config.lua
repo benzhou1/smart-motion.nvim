@@ -1,18 +1,20 @@
---- Configuration handler for smart-motion
 local log = require("smart-motion.core.log")
 
 local M = {}
 
+-- Default highlight group names
+local default_highlight_groups = {
+	hint = "SmartMotionHint",
+	first_char = "SmartMotionFirstChar",
+	second_char = "SmartMotionSecondChar",
+	first_char_dim = "SmartMotionFirstCharDim",
+	dim = "SmartMotionDim",
+}
+
 --- Default Configuration
 M.defaults = {
 	keys = "fjdksleirughtynm",
-	highlight = {
-		hint = "SmartMotionHint",
-		first_char = "SmartMotionFirstChar",
-		second_char = "SmartMotionSecondChar",
-		first_char_dim = "SmartMotionFirstCharDim",
-		dim = "SmartMotionDim",
-	},
+	highlight = {},
 	line_limit = nil,
 	multi_line = true,
 	mappings = {
@@ -21,19 +23,13 @@ M.defaults = {
 	},
 }
 
---- Holds the final validated config
 M.validated = nil
 
---- Splits a string into a table of characters.
----@param str string
----@return string[]
 local function split_string(str)
 	local result = {}
-
 	for char in str:gmatch(".") do
 		table.insert(result, char)
 	end
-
 	return result
 end
 
@@ -56,9 +52,7 @@ function M.validate(user_config)
 		error("smart-motion: `keys` must be a non-empty string")
 	end
 
-	if type(config.keys) == "string" then
-		config.keys = split_string(config.keys)
-	end
+	config.keys = split_string(config.keys)
 
 	-- Validate mappings
 	if type(config.mappings) ~= "table" or not config.mappings.n or not config.mappings.v then
@@ -66,16 +60,26 @@ function M.validate(user_config)
 		error("smart-motion: `mappings` must be a table with `n` and `v` keys")
 	end
 
-	-- Apply highlight if table provided
-	for name, value in pairs(config.highlight) do
-		if type(value) == "table" then
-			-- User passed direct highlight table (e.g., { fg = "#E06C75", bg = "none" })
-			local group_name = "SmartMotion" .. name:gsub("^%l", string.upper) -- camel case to Pascal case
-			vim.api.nvim_set_hl(0, group_name, value)
-			config.highlight[name] = group_name
-		elseif type(value) ~= "string" then
-			log.error("`highlight." .. name .. "` must be either a string highlight group or a table")
-			error("smart-motion: `highlight." .. name .. "` must be either a string or a table")
+	-- Make highlight optional and defensive
+	config.highlight = config.highlight or {}
+
+	-- Fill in any missing highlights with defaults
+	for key, default_group in pairs(default_highlight_groups) do
+		if config.highlight[key] == nil then
+			config.highlight[key] = default_group
+		end
+	end
+
+	-- Validate all highlights
+	for key, value in pairs(config.highlight) do
+		if type(value) ~= "string" and type(value) ~= "table" then
+			log.error(
+				"`highlight."
+					.. key
+					.. "` must be a string (group name) or a table (color definition), got: "
+					.. type(value)
+			)
+			error("smart-motion: `highlight." .. key .. "` must be a string or table")
 		end
 	end
 
@@ -92,9 +96,7 @@ function M.validate(user_config)
 	end
 
 	log.debug("Configuration validated successfully")
-
 	M.validated = config
-
 	return config
 end
 
