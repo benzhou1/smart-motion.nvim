@@ -30,21 +30,43 @@ function M.is_spam(key)
 end
 
 --- Handles executing word motions when spamming
----@param direction "before_cursor"|"after_cursor"
----@param hint_position "start"|"end"
-function M.handle_word_motion_spam(direction, hint_position)
-	log.debug(string.format("Handling spam motion - direction: %s, position: %s", direction, hint_position))
+function M.handle_word_motion_spam(ctx, cfg, motion_state)
+	log.debug(
+		string.format(
+			"Handling spam motion - direction: %s, position: %s",
+			motion_state.direction,
+			motion_state.hint_position
+		)
+	)
 
-	if direction == consts.DIRECTION.AFTER_CURSOR and hint_position == consts.HINT_POSITION.START then
+	if
+		motion_state.direction == consts.DIRECTION.AFTER_CURSOR
+		and motion_state.hint_position == consts.HINT_POSITION.START
+	then
 		vim.cmd("normal! w")
-	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_position == consts.HINT_POSITION.START then
+	elseif
+		motion_state.direction == consts.DIRECTION.BEFORE_CURSOR
+		and motion_state.hint_position == consts.HINT_POSITION.START
+	then
 		vim.cmd("normal! b")
-	elseif direction == consts.DIRECTION.AFTER_CURSOR and hint_position == consts.HINT_POSITION.END then
+	elseif
+		motion_state.direction == consts.DIRECTION.AFTER_CURSOR
+		and motion_state.hint_position == consts.HINT_POSITION.END
+	then
 		vim.cmd("normal! e")
-	elseif direction == consts.DIRECTION.BEFORE_CURSOR and hint_position == consts.HINT_POSITION.END then
+	elseif
+		motion_state.direction == consts.DIRECTION.BEFORE_CURSOR
+		and motion_state.hint_position == consts.HINT_POSITION.END
+	then
 		vim.cmd("normal! ge")
 	else
-		log.warn(string.format("Unknown spam motion - direction: %s, position: %s", direction, hint_position))
+		log.warn(
+			string.format(
+				"Unknown spam motion - direction: %s, position: %s",
+				motion_state.direction,
+				motion_state.hint_position
+			)
+		)
 	end
 end
 

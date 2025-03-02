@@ -4,81 +4,126 @@ local log = require("smart-motion.core.log")
 
 local M = {}
 
---- Clears all SmartMotion highlights in the buffer.
----@param bufnr integer
-function M.clear(bufnr)
-	log.debug("Clearing all highlights in buffer " .. bufnr)
+--- Clears all SmartMotion highlights in the current buffer.
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config (unused here, but part of the signature).
+---@param motion_state table  Current motion state (unused here, but part of the signature).
+function M.clear(ctx, cfg, motion_state)
+	log.debug("Clearing all highlights in buffer " .. ctx.bufnr)
 
-	vim.api.nvim_buf_clear_namespace(bufnr, consts.ns_id, 0, -1)
+	vim.api.nvim_buf_clear_namespace(ctx.bufnr, consts.ns_id, 0, -1)
 end
 
---- Applies a single-character hint.
----@param bufnr integer
----@param line integer 0-based line number.
----@param col integer 0-based column number.
+--- Applies a single-character hint label at a given position.
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config.
+---@param motion_state table  Current motion state.
+---@param line number 0-based line number.
+---@param col number 0-based column number.
 ---@param label string The single-character label.
-function M.apply_single_hint_label(bufnr, line, col, label)
+function M.apply_single_hint_label(ctx, cfg, motion_state, line, col, label)
 	log.debug(string.format("Applying single hint '%s' at line %d, col %d", label, line, col))
 
-	vim.api.nvim_buf_set_extmark(bufnr, consts.ns_id, line, col, {
-		virt_text = { { label, "SmartMotionHint" } },
+	vim.api.nvim_buf_set_extmark(ctx.bufnr, consts.ns_id, line, col, {
+		virt_text = { { label, cfg.highlight.hint or "SmartMotionHint" } },
 		virt_text_pos = "overlay",
 		hl_mode = "combine",
 	})
 end
 
---- Applies a double-character hint.
----@param bufnr integer
----@param line integer 0-based line number.
----@param col integer 0-based column number.
+--- Applies a double-character hint label at a given position.
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config.
+---@param motion_state table  Current motion state.
+---@param line number 0-based line number.
+---@param col number 0-based column number.
 ---@param label string The double-character label.
-function M.apply_double_hint_label(bufnr, line, col, label)
+function M.apply_double_hint_label(ctx, cfg, motion_state, line, col, label, options)
+	options = options or {}
+
 	local first_char, second_char = label:sub(1, 1), label:sub(2, 2)
+
+	local first_hl = options.dim_first_char and (cfg.highlight.first_char_dim or "SmartMotionFirstCharDim")
+		or (cfg.highlight.first_char or "SmartMotionFirstChar")
+	local second_hl = options.dim_first_char and (cfg.highlight.first_char or "SmartMotionFirstChar")
+		or (cfg.highlight.second_char or "SmartMotionSecondChar")
 
 	log.debug(string.format("Applying double hint '%s%s' at line %d, col %d", first_char, second_char, line, col))
 
-	vim.api.nvim_buf_set_extmark(bufnr, consts.ns_id, line, col, {
+	vim.api.nvim_buf_set_extmark(ctx.bufnr, consts.ns_id, line, col, {
 		virt_text = {
-			{ first_char, "SmartMotionFirstChar" },
-			{ second_char, "SmartMotionSecondChar" },
+			{ first_char, first_hl },
+			{ second_char, second_hl },
 		},
 		virt_text_pos = "overlay",
 		hl_mode = "combine",
 	})
 end
 
---- Applies hints to all jump targets.
----@param bufnr integer
----@param hints table<table, string> Target to hint mapping.
----@param hint_position "start"|"end" Whether to position the hint at the start or end of the word.
-function M.apply_hint_labels(bufnr, hints, hint_position)
-	log.debug(string.format("Applying %d hint labels (position: %s)", vim.tbl_count(hints), hint_position))
+--- Dims background
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config.
+---@param motion_state table  Current motion state.
+function M.dim_background(ctx, cfg, motion_state)
+	local total_lines = vim.api.nvim_buf_line_count(ctx.bufnr)
 
-	for target, label in pairs(hints) do
-		local pos = (hint_position == consts.HINT_POSITION.START) and target.start_pos or (target.end_pos - 1)
+	-- Dim the entire buffer by applying the dim highlight group to every line.
+	for line = 0, total_lines - 1 do
+		vim.api.nvim_buf_add_highlight(ctx.bufnr, consts.ns_id, cfg.highlight.dim or "SmartMotionDim", line, 0, -1)
+	end
+end
 
+--- Applies hint labels to all jump targets.
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config.
+---@param motion_state table  Current motion state.
+function M.apply_hint_labels(ctx, cfg, motion_state)
+	M.dim_background(ctx, cfg, motion_state)
+
+	log.debug(
+		string.format(
+			"Applying %d hint labels (position: %s)",
+			vim.tbl_count(motion_state.assigned_hint_labels),
+			motion_state.hint_position
+		)
+	)
+
+	for target, label in pairs(motion_state.assigned_hint_labels) do
+		local pos = (motion_state.hint_position == consts.HINT_POSITION.START) and target.start_pos
+			or (target.end_pos - 1)
 		if #label == 1 then
-			M.apply_single_hint_label(bufnr, target.line, pos, label)
+			M.apply_single_hint_label(ctx, cfg, motion_state, target.line, pos, label)
 		elseif #label == 2 then
-			M.apply_double_hint_label(bufnr, target.line, pos, label)
+			M.apply_double_hint_label(ctx, cfg, motion_state, target.line, pos, label, { dim_first_char = false })
 		else
 			log.error("Unexpected hint length for label: '" .. label .. "'")
 		end
 	end
 end
 
---- Filters hints to only show those matching the active prefix.
----@param bufnr integer
----@param active_prefix string
----@param hints table<table, string>
-function M.filter_double_hints(bufnr, active_prefix, hints)
+--- Filters double-character hints to only show those matching the active prefix.
+---@param ctx table  Motion context (must include bufnr).
+---@param cfg table  Validated config.
+---@param motion_state table  Current motion state.
+---@param active_prefix string  The active prefix used for filtering.
+---@param hints table  Mapping of targets to labels.
+function M.filter_double_hints(ctx, cfg, motion_state, active_prefix, hints)
 	log.debug("Filtering double hints with prefix: " .. active_prefix)
 
-	M.clear(bufnr)
+	M.clear(ctx, cfg, motion_state)
+	M.dim_background(ctx, cfg, motion_state)
 
 	for target, label in pairs(hints) do
 		if label:sub(1, 1) == active_prefix then
-			M.apply_double_hint(bufnr, target.line, target.start_pos, label)
+			M.apply_double_hint_label(
+				ctx,
+				cfg,
+				motion_state,
+				target.line,
+				target.start_pos,
+				label,
+				{ dim_first_char = true }
+			)
 		end
 	end
 end

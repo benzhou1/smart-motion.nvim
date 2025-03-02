@@ -3,98 +3,85 @@ local log = require("smart-motion.core.log")
 
 local M = {}
 
---- Generates a list of unique hint keys (labels) for SmartMotion targets.
--- This function adapts based on the number of targets, using single-character labels
--- when possible and gracefully falling back to double-character labels if necessary.
---
--- The logic follows these steps:
--- 1. Use single-character labels for as many targets as possible (fastest to type).
--- 2. If single-character labels are not enough, "sacrifice" some keys to form pairs (double labels).
--- 3. Ensure the final set of labels has no ambiguity — singles and doubles never overlap.
--- 4. This guarantees that `a` and `aa` are never both used in the same context.
-
----@param base_keys string[] List of allowed characters for labels (from user config).
----@param labels_needed integer Total number of jump targets we need to label.
----@return string[] Final ordered list of hint keys (exactly `labels_needed` long).
-function M.generate_hint_labels(base_keys, labels_needed)
-	if type(base_keys) ~= "table" or #base_keys == 0 then
-		log.error("generate_hint_labels received invalid base_keys")
+--- Generates hint labels based on motion state.
+-- Uses single-character labels first, and double-character labels if needed.
+-- If there are more targets than labels, uses all available labels (graceful fallback).
+---@param ctx table Full context (cursor position, buffer, etc.) — not used here, but part of standard signature.
+---@param cfg table Validated config (keys, highlights, etc.) — needed for base_keys.
+---@param motion_state table Current motion state (labels needed, direction, etc.)
+---@return string[] Final ordered list of hint labels.
+function M.generate_hint_labels(ctx, cfg, motion_state)
+	if type(cfg.keys) ~= "table" or #cfg.keys == 0 then
+		log.error("generate_hint_labels received invalid base_keys in cfg")
 		return {}
 	end
 
-	if type(labels_needed) ~= "number" or labels_needed <= 0 then
-		log.error("generate_hint_labels received invalid labels_needed: " .. tostring(labels_needed))
+	if type(motion_state) ~= "table" then
+		log.error("generate_hint_labels received invalid motion_state")
 		return {}
 	end
 
-	local keys = vim.deepcopy(base_keys)
-
-	if labels_needed <= #keys then
-		local single_char_labels = vim.list_slice(keys, 1, labels_needed)
-
-		log.debug("Using single-character labels: " .. table.concat(single_char_labels, ", "))
-
-		return single_char_labels
-	end
-
-	local extra_needed = labels_needed - #keys
-	local x = math.ceil(math.sqrt(extra_needed))
-
-	local remaining_singles = #keys - x
-	local singles = vim.list_slice(keys, 1, remaining_singles)
-	local double_base = vim.list_slice(keys, remaining_singles + 1)
+	local singles = vim.list_slice(cfg.keys, 1, motion_state.single_label_count)
+	local double_base = vim.list_slice(cfg.keys, motion_state.single_label_count + 1)
 
 	local doubles = {}
+	local doubles_needed = motion_state.extra_labels_needed
 
 	for _, first in ipairs(double_base) do
 		for _, second in ipairs(double_base) do
 			table.insert(doubles, first .. second)
 
-			if #doubles >= extra_needed then
+			if #doubles >= doubles_needed then
 				break
 			end
 		end
-		if #doubles >= extra_needed then
+
+		if #doubles >= doubles_needed then
 			break
 		end
 	end
 
 	local final_labels = vim.list_extend(singles, doubles)
 
-	if #final_labels < labels_needed then
-		log.error(
+	if #final_labels < motion_state.jump_target_count then
+		log.warn(
 			string.format(
-				"Not enough labels for %d targets! This should never happen. Consider adding more keys to your list",
-				labels_needed
+				"Not enough labels for %d targets! Using %d available labels.",
+				motion_state.jump_target_count,
+				#final_labels
 			)
 		)
 	end
 
-	log.debug("Generated labels: " .. table.concat(final_labels, ", "))
+	log.debug(string.format("Generated %d labels (singles: %d, doubles: %d)", #final_labels, #singles, #doubles))
 
 	return final_labels
 end
 
 --- Assigns hint labels to targets.
----@param jump_targets table[] List of jump targets.
----@param hint_labels string[] Generated hint labels.
+---@param ctx table Full context (cursor position, buffer, etc.) — not used here, but part of standard signature.
+---@param cfg table Validated config — not used directly here, but part of standard signature.
+---@param motion_state table Current motion state — not used directly here.
 ---@return table<table, string> Mapping of target to assigned hint .
-function M.assign_hint_labels(jump_targets, hint_labels)
-	if #jump_targets > #hint_labels then
-		log.error(
-			string.format("assign_hint_labels received more targets (%d) than labels (%d)", #jump_targets, #hint_labels)
+function M.assign_hint_labels(ctx, cfg, motion_state)
+	if #motion_state.jump_targets > #motion_state.hint_labels then
+		log.debug(
+			string.format(
+				"Not enough labels for %d targets! Only assigning labels to the first %d targets.",
+				#motion_state.jump_targets,
+				#motion_state.hint_labels
+			)
 		)
-
-		return {}
 	end
 
 	local hints = {}
 
-	for i, target in ipairs(jump_targets) do
-		if i > #hint_labels then
+	for i, target in ipairs(motion_state.jump_targets) do
+		if i > #motion_state.hint_labels then
 			break
 		end
-		hints[target] = hint_labels[i]
+
+		hints[target] = motion_state.hint_labels[i]
 	end
 
 	log.debug(string.format("Assigned %d hints to targets", #hints))
@@ -103,16 +90,14 @@ function M.assign_hint_labels(jump_targets, hint_labels)
 end
 
 --- Generates and Assigns labels to targets
----@param jump_targets table[] List of jump targets.
----@param base_keys string[] Available hint keys.
----@param labels_needed integer Total number of jump targets we need to label.
----@return table<table, string> Mapping of target to assigned hint .
-function M.generate_and_assign_labels(jump_targets, base_keys, labels_needed)
-	log.debug(string.format("Generating and assigning labels - needed: %d", labels_needed))
+---@param ctx table Full context (cursor position, buffer, etc.).
+---@param cfg table Validated config.
+---@param motion_state table Current motion state.
+function M.generate_and_assign_labels(ctx, cfg, motion_state)
+	log.debug(string.format("Generating and assigning labels - needed: %d", motion_state.extra_labels_needed))
 
-	local hint_labels = M.generate_hint_labels(base_keys, labels_needed)
-
-	return M.assign_hint_labels(jump_targets, hint_labels)
+	motion_state.hint_labels = M.generate_hint_labels(ctx, cfg, motion_state)
+	motion_state.assigned_hint_labels = M.assign_hint_labels(ctx, cfg, motion_state)
 end
 
 return M
