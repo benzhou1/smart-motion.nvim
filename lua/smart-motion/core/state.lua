@@ -1,87 +1,126 @@
 --- Module for tracking motion state.
 local log = require("smart-motion.core.log")
+local consts = require("smart-motion.consts")
 
 local M = {}
 
--- Static state (set once during setup)
-M.total_keys = 0
-M.max_labels = 0
-M.max_lines = 0
-
--- Dynamic state (reset per motion)
-M.labels_needed = 0
-M.direction = nil
-M.hint_position = nil
+M.static = {}
 
 --- Initializes static key-based state once when config is verified.
----@param base_keys string[] Configured base keys.
-function M.init_static_state(base_keys)
-	if type(base_keys) ~= "table" or #base_keys == 0 then
-		log.error("init_static_state received invalid base_keys: expected non-empty table")
+---@param cfg table Full user config
+function M.init_motion_state(cfg)
+	if type(cfg.keys) ~= "table" or #cfg.keys == 0 then
+		log.error("init_motion_state received invalid keys: expected non-empty table")
 
 		return
 	end
 
-	local base_keys_squared = #base_keys * #base_keys
+	local keys_squared = #cfg.keys * #cfg.keys
 
-	M.total_keys = #base_keys
-	M.max_lines = base_keys_squared
-	M.max_labels = base_keys_squared
+	M.static = {
+		total_keys = #cfg.keys,
+		max_labels = keys_squared,
+		max_lines = keys_squared,
+	}
 
 	log.debug(
 		string.format(
 			"Static state initialized - total_keys: %d, max_labels: %d, max_lines: %d",
-			M.total_keys,
-			M.max_lines,
-			M.max_labels
+			M.static.total_keys,
+			M.static.max_lines,
+			M.static.max_labels
 		)
 	)
 end
 
---- Sets the initial motion intent (called immediately when motion starts).
----@param direction string Motion direction ("before_cursor" or "after_cursor").
----@param hint_position string Hint position ("start" or "end").
-function M.set_motion_intent(direction, hint_position)
-	M.direction = direction
-	M.hint_position = hint_position
+--- Creates a fresh motion state (per motion)
+---@param direction string Motion direction ("before_cursor" or "after_cursor")
+---@param hint_position string Hint position ("start" or "end")
+---@param target_type string "word", "char", "line"
+---@return table motion_state
+function M.create_motion_state(direction, hint_position, target_type)
+	return {
+		total_keys = M.static.total_keys,
+		max_lines = M.static.max_lines,
+		max_labels = M.static.max_labels,
 
-	log.debug(
-		string.format(
-			"Motion intent set - direction: %s, hint_position: %s",
-			tostring(M.direction),
-			tostring(M.hint_position)
-		)
-	)
+		-- Motion Intent
+		direction = direction,
+		hint_position = hint_position,
+		target_type = target_type,
+
+		-- Motion-specific data (starts empty)
+		lines = {},
+		jump_target_count = 0,
+		jump_targets = {},
+		hint_labels = {},
+		assigned_hint_labels = {},
+
+		-- Label calculations
+		single_label_count = 0,
+		extra_labels_needed = 0,
+		sacrificed_keys_count = 0,
+
+		-- Selection
+		selection_mode = consts.SELECTION_MODE.FIRST,
+		selection_first_char = nil,
+		selected_jump_target = nil,
+	}
 end
 
 --- Finalizes the motion state after target collection.
----@param jump_target_count integer Number of jump targets found.
-function M.finalize_motion_state(jump_target_count)
-	if M.total_keys == 0 then
+---@param motion_state table The current motion state (mutable)
+function M.finalize_motion_state(motion_state)
+	if motion_state.total_keys == 0 then
 		log.error("finalize_motion_state called before static state was initialized")
 		return
 	end
+
+	local jump_target_count = #motion_state.jump_targets
+	motion_state.jump_target_count = jump_target_count
 
 	if type(jump_target_count) ~= "number" or jump_target_count < 0 then
 		log.error("finalize_motion_state received invalid jump_target_count: " .. tostring(jump_target_count))
 		return
 	end
 
-	M.labels_needed = math.max(jump_target_count - M.total_keys, 0)
+	if jump_target_count <= M.static.total_keys then
+		-- We only need singles
+		motion_state.single_label_count = jump_target_count
+		motion_state.extra_labels_needed = 0
+		motion_state.sacrificed_keys_count = 0
+	else
+		-- We need doubles
+		motion_state.extra_labels_needed = jump_target_count - motion_state.total_keys
+		motion_state.sacrificed_keys_count = math.ceil(math.sqrt(motion_state.extra_labels_needed))
+		motion_state.single_label_count = motion_state.total_keys - motion_state.sacrificed_keys_count
+	end
 
-	log.debug(string.format("Motion state finalized - labels_needed: %d", M.labels_needed))
+	log.debug(
+		string.format(
+			"Motion state finalized - jump_targets: %d, singles: %d, extra_needed: %d, sacrificed_keys: %d",
+			motion_state.jump_target_count,
+			motion_state.single_label_count,
+			motion_state.extra_labels_needed,
+			motion_state.sacrificed_keys_count
+		)
+	)
 end
 
---- Getter function for state
-function M.get()
-	return {
-		total_keys = M.total_keys,
-		max_lines = M.max_lines,
-		max_labels = M.max_labels,
-		labels_needed = M.labels_needed,
-		direction = M.direction,
-		hint_position = M.hint_position,
-	}
+function M.reset(motion_state)
+	motion_state.single_label_count = 0
+	motion_state.extra_labels_needed = 0
+	motion_state.sacrificed_keys_count = 0
+
+	motion_state.lines = {}
+	motion_state.jump_target_count = 0
+	motion_state.jump_targets = {}
+	motion_state.hint_labels = {}
+	motion_state.assigned_hint_labels = {}
+
+	motion_state.selection_mode = consts.SELECTION_MODE.FIRST
+	motion_state.selection_first_char = nil
+	motion_state.selected_jump_target = nil
 end
 
 return M
