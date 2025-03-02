@@ -138,6 +138,7 @@ return {
 🎨 Important Callout: Flexible Highlight Configuration
 
 You can configure how SmartMotion highlights its hints in two ways:
+
 1️⃣ Reference Existing Highlight Groups (Default)
 
 This is the easiest way — you can point to existing highlight groups (like SmartMotionHint).
