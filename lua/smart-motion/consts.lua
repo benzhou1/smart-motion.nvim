@@ -51,4 +51,9 @@ M.TARGET_TYPES = {
 	LINE = "line",
 }
 
+M.SELECTION_MODE = {
+	FIRST = "first",
+	SECOND = "second",
+}
+
 return M
