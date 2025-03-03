@@ -94,9 +94,11 @@ function M.get_jump_targets_for_word(ctx, cfg, motion_state)
 					-- Skip words behind cursor on first line
 				else
 					table.insert(jump_targets, {
+						text = word.text,
 						line = line_number,
 						start_pos = word.start_pos,
 						end_pos = word.end_pos,
+						bufnr = ctx.bufnr,
 					})
 				end
 
@@ -110,7 +112,7 @@ function M.get_jump_targets_for_word(ctx, cfg, motion_state)
 	elseif motion_state.direction == consts.DIRECTION.BEFORE_CURSOR then
 		for line_index = #motion_state.lines, 1, -1 do
 			local line_text = motion_state.lines[line_index]
-			local line_number = ctx.cursor_line + line_index - 1
+			local line_number = ctx.cursor_line - (#motion_state.lines - line_index)
 			local words = M.find_words_in_line(line_text)
 
 			for i = #words, 1, -1 do
@@ -120,9 +122,11 @@ function M.get_jump_targets_for_word(ctx, cfg, motion_state)
 					-- Skip words after cursor on first line
 				else
 					table.insert(jump_targets, {
+						text = word.text,
 						line = line_number,
 						start_pos = word.start_pos,
 						end_pos = word.end_pos,
+						bufnr = ctx.bufnr,
 					})
 				end
 
