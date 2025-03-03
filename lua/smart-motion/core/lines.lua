@@ -1,4 +1,3 @@
-local state = require("smart-motion.core.state")
 local consts = require("smart-motion.consts")
 local log = require("smart-motion.core.log")
 
@@ -31,6 +30,7 @@ function M.get_lines_for_motion(ctx, cfg, motion_state)
 	local last_line = vim.api.nvim_buf_line_count(ctx.bufnr)
 
 	if motion_state.direction == consts.DIRECTION.AFTER_CURSOR then
+		-- Fetch from the cursor to either max_lines forward, or the end of the file.
 		local max_lines = math.min(motion_state.max_lines, last_line - ctx.cursor_line + 1)
 
 		log.debug(string.format("Scanning after cursor - max_lines: %d (last_line: %d)", max_lines, last_line))
@@ -39,6 +39,7 @@ function M.get_lines_for_motion(ctx, cfg, motion_state)
 		motion_state.lines = lines
 		return lines
 	elseif motion_state.direction == consts.DIRECTION.BEFORE_CURSOR then
+		-- Fetch from the start of the file (line 0) or max_lines before the cursor to cursor_line (inclusive)
 		local start_line = math.max(ctx.cursor_line - motion_state.max_lines, 0)
 
 		log.debug(string.format("Scanning before cursor - start_line: %d", start_line))
