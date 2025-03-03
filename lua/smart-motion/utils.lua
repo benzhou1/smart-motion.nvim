@@ -173,7 +173,7 @@ function M.reset_motion(ctx, cfg, motion_state)
 	spam.reset() -- Assuming you add a reset function in spam module.
 
 	-- Reset dynamic parts of the motion state.
-	state.reset(motion_state)
+	motion_state = state.reset(motion_state)
 end
 
 return M
