@@ -55,12 +55,12 @@ function M.setup(cfg)
 				cfg.highlight[key] = value
 			else
 				-- If it does not exist, fallback to the default group.
-				log.info(
+				log.debug(
 					"Custom highlight group '"
-					.. value
-					.. "' not found, falling back to default '"
-					.. default_group
-					.. "'"
+						.. value
+						.. "' not found, falling back to default '"
+						.. default_group
+						.. "'"
 				)
 				cfg.highlight[key] = default_group
 			end
