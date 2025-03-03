@@ -75,7 +75,7 @@ function M.get_jump_targets_for_word(ctx, cfg, motion_state)
 	end
 
 	if not motion_state.lines or #motion_state.lines == 0 then
-		log.warn("get_jump_targets_for_word: No lines provided")
+		log.debug("get_jump_targets_for_word: No lines provided")
 
 		return jump_targets
 	end

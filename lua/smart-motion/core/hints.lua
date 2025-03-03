@@ -44,7 +44,7 @@ function M.generate_hint_labels(ctx, cfg, motion_state)
 	local final_labels = vim.list_extend(singles, doubles)
 
 	if #final_labels < motion_state.jump_target_count then
-		log.warn(
+		log.debug(
 			string.format(
 				"Not enough labels for %d targets! Using %d available labels.",
 				motion_state.jump_target_count,

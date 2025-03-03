@@ -28,7 +28,9 @@ local function register_mappings(mappings)
 
 	for mode, mode_mappings in pairs(mappings) do
 		if type(mode_mappings) ~= "table" then
-			log.warn("Skipping mappings for mode '" .. mode .. "' (expected table, got: " .. type(mode_mappings) .. ")")
+			log.debug(
+				"Skipping mappings for mode '" .. mode .. "' (expected table, got: " .. type(mode_mappings) .. ")"
+			)
 
 			goto continue
 		end

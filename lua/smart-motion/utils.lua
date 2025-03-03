@@ -17,7 +17,7 @@ function M.close_floating_windows()
 		local ok, win_config = pcall(vim.api.nvim_win_get_config, winid)
 
 		if not ok then
-			log.warn("Failed to get window config for winid: " .. tostring(winid))
+			log.debug("Failed to get window config for winid: " .. tostring(winid))
 
 			goto continue
 		end
@@ -26,7 +26,7 @@ function M.close_floating_windows()
 			local success, err = pcall(vim.api.nvim_win_close, winid, true)
 
 			if not success then
-				log.warn(string.format("Failed to close floating window %d: %s", winid, err))
+				log.debug(string.format("Failed to close floating window %d: %s", winid, err))
 			end
 		end
 
@@ -53,7 +53,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 	local char = vim.fn.getcharstr()
 
 	if char == "" then
-		log.warn("User pressed nothing - selection cancelled")
+		log.debug("User pressed nothing - selection cancelled")
 
 		return nil
 	end
@@ -66,7 +66,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 		end
 	end
 
-	log.warn("No matching hint found for input: " .. char)
+	log.debug("No matching hint found for input: " .. char)
 
 	return nil
 end
@@ -134,6 +134,7 @@ function M.prepare_motion(direction, hint_position, target_type)
 
 	if not vim.tbl_contains({ "start", "end" }, hint_position) then
 		log.error("prepare_motion: Invalid hint_position provided: " .. tostring(hint_position))
+
 		return nil, nil, nil
 	end
 
@@ -147,6 +148,7 @@ function M.prepare_motion(direction, hint_position, target_type)
 
 	if type(cfg.keys) ~= "table" or #cfg.keys == 0 then
 		log.error("prepare_motion: Config `keys` is missing or improperly formatted")
+
 		return nil, nil, nil
 	end
 

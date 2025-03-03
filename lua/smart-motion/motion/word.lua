@@ -74,7 +74,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 	--
 	local lines = lines_module.get_lines_for_motion(ctx, cfg, motion_state)
 	if not lines or #lines == 0 then
-		log.warn("No lines to search - exiting early")
+		log.debug("No lines to search - exiting early")
 
 		return
 	end
@@ -87,7 +87,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 	log.debug(string.format("Found %d jump targets", #jump_targets))
 
 	if #jump_targets == 0 then
-		log.warn("No valid jump targets found - exiting early")
+		log.bebug("No valid jump targets found - exiting early")
 
 		return
 	end
@@ -123,7 +123,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 			)
 		)
 	else
-		log.warn("No target selected - user cancelled")
+		log.debug("No target selected - user cancelled")
 	end
 
 	--

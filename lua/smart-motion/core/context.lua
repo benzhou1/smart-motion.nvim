@@ -14,11 +14,11 @@ local M = {}
 ---@param ctx Context
 local function validate(ctx)
 	if ctx.cursor_line < 0 or ctx.cursor_line >= ctx.last_line then
-		log.warn(string.format("Cursor line %d is out of range (0 to %d)", ctx.cursor_line, ctx.last_line - 1))
+		log.debug(string.format("Cursor line %d is out of range (0 to %d)", ctx.cursor_line, ctx.last_line - 1))
 	end
 
 	if ctx.cursor_col < 0 then
-		log.warn(string.format("Cursor column is negative: %d", ctx.cursor_col))
+		log.debug(string.format("Cursor column is negative: %d", ctx.cursor_col))
 	end
 end
 

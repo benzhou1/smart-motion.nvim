@@ -60,7 +60,7 @@ function M.handle_word_motion_spam(ctx, cfg, motion_state)
 	then
 		vim.cmd("normal! ge")
 	else
-		log.warn(
+		log.debug(
 			string.format(
 				"Unknown spam motion - direction: %s, position: %s",
 				motion_state.direction,

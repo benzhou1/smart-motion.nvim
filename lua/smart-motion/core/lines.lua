@@ -39,7 +39,7 @@ function M.get_lines_for_motion(ctx, cfg, motion_state)
 		motion_state.lines = lines
 		return lines
 	elseif motion_state.direction == consts.DIRECTION.BEFORE_CURSOR then
-		local start_line = math.max(ctx.cursor_line - state.max_lines, 0)
+		local start_line = math.max(ctx.cursor_line - motion_state.max_lines, 0)
 
 		log.debug(string.format("Scanning before cursor - start_line: %d", start_line))
 

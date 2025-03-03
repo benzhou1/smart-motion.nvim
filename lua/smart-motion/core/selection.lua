@@ -19,7 +19,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 	local char = vim.fn.getcharstr()
 
 	if char == "" then
-		log.warn("User pressed nothing - selection cancelled")
+		log.debug("User pressed nothing - selection cancelled")
 		return
 	end
 
@@ -58,7 +58,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 			-- Immediately recurse to handle the second char (simpler for caller)
 			return M.wait_for_hint_selection(ctx, cfg, motion_state)
 		else
-			log.warn("No matching single or double-char hint found for input: " .. char)
+			log.debug("No matching single or double-char hint found for input: " .. char)
 
 			return
 		end
@@ -77,7 +77,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 			end
 		end
 
-		log.warn("No matching double-char hint found for input: " .. full_hint)
+		log.debug("No matching double-char hint found for input: " .. full_hint)
 
 		return
 	end
