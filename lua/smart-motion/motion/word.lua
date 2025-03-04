@@ -27,16 +27,8 @@ local M = {}
 --- Public method: Hints words from the possible jump targets in a given direction.
 ---@param direction "before_cursor"|"after_cursor"
 ---@param hint_position "start"|"end"
----@param is_spammable boolean|nil Optional, allows skipping highlighting if user is spamming the trigger key.
-function M.hint_words(direction, hint_position, is_spammable)
-	log.debug(
-		string.format(
-			"Highlighting word - direction: %s, hint_position: %s, is_spammable: %s",
-			direction,
-			hint_position,
-			tostring(is_spammable)
-		)
-	)
+function M.hint_words(direction, hint_position)
+	log.debug(string.format("Highlighting word - direction: %s, hint_position: %s", direction, hint_position))
 
 	--
 	-- Gather Context
@@ -54,7 +46,6 @@ function M.hint_words(direction, hint_position, is_spammable)
 	-- clearing spam tracking, and resetting the dynamic state
 	--
 	utils.reset_motion(ctx, cfg, motion_state)
-	flow_state.refresh_flow()
 
 	--
 	-- Calculate Lines
@@ -76,14 +67,20 @@ function M.hint_words(direction, hint_position, is_spammable)
 	end
 
 	local collector, first_jump_target = generator(ctx, cfg, motion_state, {})
+
+	if first_jump_target then
+		motion_state.selected_jump_target = first_jump_target
+	end
+
 	--
 	-- Handle Flow State
 	--
-	if flow_state.evaluate_and_refresh_flow() then
-		log.debug("Flow is active, using pending jump immediately")
-		utils.jump_to_target(ctx, cfg, motion_state)
-
-		return
+	if flow_state.evaluate_flow_at_motion_start() then
+		if first_jump_target then
+			utils.jump_to_target(ctx, cfg, motion_state)
+			utils.reset_motion(ctx, cfg, motion_state)
+			return
+		end
 	end
 
 	--
@@ -105,6 +102,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 		table.insert(jump_targets, jump_target)
 	end
 
+	-- Update jump targets with the rest of the targets
 	motion_state.jump_targets = jump_targets
 
 	state.finalize_motion_state(motion_state)
@@ -117,14 +115,14 @@ function M.hint_words(direction, hint_position, is_spammable)
 	--
 	-- Wait for Selection
 	--
-	selection.wait_for_hint_selection(ctx, cfg, motion_state)
+	local jumped_early = selection.wait_for_hint_selection(ctx, cfg, motion_state)
 
-	--
-	-- Execute Jump
-	--
+	if jumped_early then
+		utils.reset_motion(ctx, cfg, motion_state)
+		return
+	end
+
 	if motion_state.selected_jump_target then
-		utils.jump_to_target(ctx, cfg, motion_state)
-
 		log.debug(
 			string.format(
 				"Jumped to target - line: %d, col: %d",
@@ -132,16 +130,13 @@ function M.hint_words(direction, hint_position, is_spammable)
 				motion_state.selected_jump_target.col
 			)
 		)
+
+		utils.jump_to_target(ctx, cfg, motion_state)
 	else
-		log.debug("No target selected - user cancelled")
+		log.debug("User cancelled selection - resetting flow")
+		flow_state.reset() -- Cancelled = full flow break
+		utils.reset_motion(ctx, cfg, motion_state) -- Always clear extmarks
 	end
-
-	--
-	-- Clear Everything
-	--
-	utils.reset_motion(ctx, cfg, motion_state)
-
-	log.debug("Word motion complete")
 end
 
 return M
