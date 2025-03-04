@@ -1,6 +1,7 @@
 local log = require("smart-motion.core.log")
 local highlight = require("smart-motion.core.highlight")
 local consts = require("smart-motion.consts")
+local flow_state = require("smart-motion.core.flow-state")
 
 local M = {}
 
@@ -17,6 +18,8 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 	end
 
 	local char = vim.fn.getcharstr()
+
+	flow_state.start_flow()
 
 	if char == "" then
 		log.debug("User pressed nothing - selection cancelled")

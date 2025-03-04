@@ -19,6 +19,7 @@ local spam = require("smart-motion.core.spam")
 local lines_module = require("smart-motion.core.lines")
 local selection = require("smart-motion.core.selection")
 local targets = require("smart-motion.core.targets")
+local flow_state = require("smart-motion.core.flow-state")
 local log = require("smart-motion.core.log")
 
 local M = {}
@@ -53,6 +54,7 @@ function M.hint_words(direction, hint_position, is_spammable)
 	-- clearing spam tracking, and resetting the dynamic state
 	--
 	utils.reset_motion(ctx, cfg, motion_state)
+	flow_state.refresh_flow()
 
 	--
 	-- Calculate Lines
@@ -75,14 +77,11 @@ function M.hint_words(direction, hint_position, is_spammable)
 
 	local collector, first_jump_target = generator(ctx, cfg, motion_state, {})
 	--
-	-- Handle spam detection
+	-- Handle Flow State
 	--
-	local spam_key = direction .. "-" .. hint_position
-
-	if is_spammable and spam.is_spam(spam_key) then
-		log.debug(string.format("Spamming detected - executing native motion for: %s", spam_key))
-
-		spam.handle_word_motion_spam(ctx, cfg, motion_state)
+	if flow_state.evaluate_and_refresh_flow() then
+		log.debug("Flow is active, using pending jump immediately")
+		utils.jump_to_target(ctx, cfg, motion_state)
 
 		return
 	end
