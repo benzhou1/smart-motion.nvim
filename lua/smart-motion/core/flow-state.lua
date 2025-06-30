@@ -1,4 +1,5 @@
 local log = require("smart-motion.core.log")
+local config = require("smart-motion.config")
 
 local FLOW_TIMEOUT_MS = 300
 
@@ -118,8 +119,9 @@ function M.is_expired()
 	local now = M.get_timestamp()
 	local elapsed = now - M.last_motion_timestamp
 
-	if elapsed > FLOW_TIMEOUT_MS then
-		log.debug(string.format("Flow expired after %dms (timeout: %dms)", elapsed, FLOW_TIMEOUT_MS))
+	local flow_timeout_ms = config.validated.flow_timeout_ms or FLOW_TIMEOUT_MS
+	if elapsed > flow_timeout_ms then
+		log.debug(string.format("Flow expired after %dms (timeout: %dms)", elapsed, flow_timeout_ms))
 		return true
 	end
 
