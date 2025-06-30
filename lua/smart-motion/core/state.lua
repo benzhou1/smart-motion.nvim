@@ -10,6 +10,7 @@ local consts = require("smart-motion.consts")
 --- @field hint_position HintPosition
 --- @field target_type TargetType
 --- @field ignore_whitespace boolean
+--- @field keys? fun(keys: string[]): string[]
 
 -- Target tracking
 --- @field jump_target_count integer
@@ -48,6 +49,7 @@ function M.init_motion_state(cfg)
 		total_keys = #cfg.keys,
 		max_labels = keys_squared,
 		max_lines = keys_squared,
+		keys = cfg.keys,
 	}
 
 	log.debug(
@@ -111,7 +113,18 @@ function M.finalize_motion_state(motion_state)
 		return
 	end
 
-	if jump_target_count <= M.static.total_keys then
+	local total_keys = M.static.total_keys
+	-- Handle dynamic keys if provided
+	if motion_state.keys then
+		local keys = motion_state.keys(M.static.keys)
+		local keys_squared = #keys * #keys
+		total_keys = #keys
+		motion_state.total_keys = total_keys
+		motion_state.max_lines = keys_squared
+		motion_state.max_labels = keys_squared
+	end
+
+	if jump_target_count <= total_keys then
 		-- We only need singles
 		motion_state.single_label_count = jump_target_count
 		motion_state.double_label_count = 0
