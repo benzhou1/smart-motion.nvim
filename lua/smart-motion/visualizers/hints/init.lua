@@ -105,16 +105,22 @@ function M.run(ctx, cfg, motion_state)
 		if not label or not target then
 			break
 		end
+		local should_skip = false
+		if motion_state.ignore_target ~= nil then
+		  should_skip = motion_state.ignore_target(target, label)
+		end
 
-		if #label == 1 then
-			highlight.apply_single_hint_label(ctx, cfg, motion_state, target, label)
-			motion_state.assigned_hint_labels[label] = { target = target, is_single_prefix = true }
-		elseif #label == 2 then
-			highlight.apply_double_hint_label(ctx, cfg, motion_state, target, label)
-			motion_state.assigned_hint_labels[label] = { target = target }
-			motion_state.assigned_hint_labels[label:sub(1, 1)] = { is_double_prefix = true }
-		else
-			log.error("Unexpected hint length for label: '" .. label .. "'")
+		if not should_skip then
+			if #label == 1 then
+				highlight.apply_single_hint_label(ctx, cfg, motion_state, target, label)
+				motion_state.assigned_hint_labels[label] = { target = target, is_single_prefix = true }
+			elseif #label == 2 then
+				highlight.apply_double_hint_label(ctx, cfg, motion_state, target, label)
+				motion_state.assigned_hint_labels[label] = { target = target }
+				motion_state.assigned_hint_labels[label:sub(1, 1)] = { is_double_prefix = true }
+			else
+				log.error("Unexpected hint length for label: '" .. label .. "'")
+			end
 		end
 	end
 
