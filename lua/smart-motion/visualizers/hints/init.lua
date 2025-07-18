@@ -109,6 +109,9 @@ function M.run(ctx, cfg, motion_state)
 		if motion_state.ignore_target ~= nil then
 		  should_skip = motion_state.ignore_target(target, label)
 		end
+		if motion_state.substitute_label then
+			label = motion_state.substitute_label(target, label) or label
+		end
 
 		if not should_skip then
 			if #label == 1 then
