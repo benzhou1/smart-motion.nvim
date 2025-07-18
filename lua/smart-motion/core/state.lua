@@ -66,6 +66,7 @@ function M.create_motion_state()
 		selection_mode = SELECTION_MODE.FIRST,
 		selection_first_char = nil,
 		selected_jump_target = nil,
+		selected_jump_char = nil,
 	}
 end
 
