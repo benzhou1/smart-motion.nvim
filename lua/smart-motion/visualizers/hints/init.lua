@@ -13,7 +13,8 @@ local M = {}
 ---@param motion_state SmartMotionMotionState
 ---@return string[] Final ordered list of hint labels.
 function M.generate_hint_labels(ctx, cfg, motion_state)
-	if type(cfg.keys) ~= "table" or #cfg.keys == 0 then
+	local keys = motion_state.keys or cfg.keys
+	if type(keys) ~= "table" or #keys == 0 then
 		log.error("generate_hint_labels received invalid base_keys in cfg")
 		return {}
 	end
@@ -21,11 +22,11 @@ function M.generate_hint_labels(ctx, cfg, motion_state)
 	local single_label_count = motion_state.single_label_count
 	local double_label_count = motion_state.double_label_count
 
-	local singles = vim.list_slice(cfg.keys, 1, single_label_count)
+	local singles = vim.list_slice(keys, 1, single_label_count)
 	local doubles = {}
 
 	if double_label_count > 0 then
-		local double_base = vim.list_slice(cfg.keys, single_label_count + 1)
+		local double_base = vim.list_slice(keys, single_label_count + 1)
 
 		for _, first in ipairs(double_base) do
 			for _, second in ipairs(double_base) do
