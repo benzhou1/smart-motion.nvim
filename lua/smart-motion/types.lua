@@ -62,7 +62,8 @@
 --- @field ignore_whitespace boolean
 --- @field jump_target_count integer
 --- @field jump_targets JumpTarget[]  -- Replace `any` with a concrete `JumpTarget` type later
---- @field ignore_target? fun(target: JumpTarget, label: string): boolean Allows filtering of targets without ordering of labels changing
+--- @ignore_target? fun(target: JumpTarget, label: string): boolean Allows filtering of targets without ordering of labels changing
+--- @substitute_label? fun(target: JumpTarget, label: string): string? Allows for substituting a specific label for a target, should only retrn labels that are not part of keys to avoid conflicts
 --- @field selected_jump_target? JumpTarget
 --- @field selected_jump_char? string
 --- @field hint_labels string[]  -- Possibly just strings or label metadata?
