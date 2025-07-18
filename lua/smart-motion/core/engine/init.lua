@@ -15,11 +15,13 @@ local EXIT_TYPE = consts.EXIT_TYPE
 local M = {}
 
 --- @param trigger_key string
-function M.run(trigger_key)
+function M.run(trigger_key, opts)
+	opts = opts or {}
 	local ctx, cfg, motion_state
 
 	local exit_type = exit_event.wrap(function()
 		ctx, cfg, motion_state = setup.run(trigger_key)
+		motion_state = vim.tbl_deep_extend("keep", opts.motion_state or {}, motion_state)
 
 		infer.run(ctx, cfg, motion_state)
 
