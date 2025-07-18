@@ -23,7 +23,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 		log.debug("Selection cancelled by key: " .. char .. " - exiting flow")
 		flow_state.exit_flow()
 		motion_state.selected_jump_target = nil
-
+		motion_state.selected_jump_char = nil
 		return
 	end
 
@@ -39,6 +39,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 			if #char == 1 and entry.is_single_prefix then
 				log.debug("User selected single-char hint: " .. char)
 				motion_state.selected_jump_target = entry.target
+				motion_state.selected_jump_char = char
 				return
 			end
 
@@ -59,6 +60,7 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 
 		log.debug("No matching hint found for input: " .. char)
 		motion_state.selected_jump_target = nil
+		motion_state.selected_jump_char = nil
 
 		-- Fallthrough - We assume the key the user pressed is a motion if it doesn't match a label
 		vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(char, true, false, true), "m", true)
@@ -73,16 +75,19 @@ function M.wait_for_hint_selection(ctx, cfg, motion_state)
 		if entry then
 			log.debug("User completed double-char selection: " .. full_hint)
 			motion_state.selected_jump_target = entry.target
+			motion_state.selected_jump_char = full_hint
 			return
 		end
 
 		log.debug("No matching double-char hint found for input: " .. full_hint)
 		motion_state.selected_jump_target = nil
+		motion_state.selected_jump_char = nil
 		return
 	end
 
 	log.error("Unexpected selection state mode: " .. tostring(motion_state.selection_mode))
 	motion_state.selected_jump_target = nil
+	motion_state.selected_jump_char = nil
 end
 
 return M
