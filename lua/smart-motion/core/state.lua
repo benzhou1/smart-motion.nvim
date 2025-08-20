@@ -98,6 +98,10 @@ function M.finalize_motion_state(ctx, cfg, motion_state)
 		motion_state.max_lines = keys_squared
 		motion_state.max_labels = keys_squared
 		motion_state.keys = keys
+		M.static.total_keys = total_keys
+		M.static.max_lines = keys_squared
+		M.static.max_labels = keys_squared
+		M.static.keys = keys
 	end
 
 	if jump_target_count <= M.static.total_keys then
