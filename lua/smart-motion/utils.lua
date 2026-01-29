@@ -26,10 +26,12 @@ function M.close_floating_windows()
 		end
 
 		if vim.tbl_contains({ "cursor", "win" }, win_config.relative) then
-			local success, err = pcall(vim.api.nvim_win_close, winid, true)
-
-			if not success then
-				log.debug(string.format("Failed to close floating window %d: %s", winid, err))
+			-- Only close cursor-relative floating windows
+			if win_config.relative == "cursor" then
+				local success, err = pcall(vim.api.nvim_win_close, winid, true)
+				if not success then
+					log.debug(string.format("Failed to close floating window %d: %s", winid, err))
+				end
 			end
 		end
 
